@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Budget Australia 🦘</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2330;
+    --border: #30363d;
+    --accent: #f0a500;
+    --accent2: #ff6b35;
+    --green: #3fb950;
+    --red: #f85149;
+    --text: #e6edf3;
+    --muted: #7d8590;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    padding: 24px;
+    max-width: 860px;
+    margin: 0 auto;
+  }
+  .header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 32px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .title { font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 800; color: var(--accent); letter-spacing: -1px; }
+  .subtitle { font-size: 0.72rem; color: var(--muted); margin-top: 4px; }
+  .dates { font-size: 0.68rem; color: var(--muted); text-align: right; line-height: 1.9; }
+  .dates span { color: var(--accent); }
+
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; }
+  .card-label { font-size: 0.6rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
+  .card-value { font-family: 'Syne', sans-serif; font-size: 1.55rem; font-weight: 700; }
+  .card-value.total { color: var(--accent); }
+  .card-value.paid { color: var(--green); }
+  .card-value.remaining { color: var(--accent2); }
+  .card-sub { font-size: 0.6rem; color: var(--muted); margin-top: 4px; }
+
+  .progress-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; }
+  .progress-header { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.65rem; color: var(--muted); }
+  .progress-bar { height: 7px; background: var(--surface2); border-radius: 99px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--green), var(--accent)); border-radius: 99px; transition: width 0.5s ease; }
+
+  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 20px; }
+
+  .t-head {
+    display: grid;
+    grid-template-columns: 28px 1fr 100px 95px 90px 70px 28px;
+    padding: 9px 16px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    font-size: 0.58rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .t-row {
+    display: grid;
+    grid-template-columns: 28px 1fr 100px 95px 90px 70px 28px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    align-items: center;
+    gap: 8px;
+    transition: background 0.15s;
+  }
+  .t-row:last-child { border-bottom: none; }
+  .t-row:hover { background: rgba(255,255,255,0.02); }
+  .t-row.is-paid { border-left: 2px solid var(--green); background: rgba(63,185,80,0.04); }
+  .t-row.is-paid .r-name { color: var(--muted); text-decoration: line-through; }
+
+  .check-box {
+    width: 16px; height: 16px;
+    border: 1.5px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+    flex-shrink: 0;
+    user-select: none;
+  }
+  .check-box.on { background: var(--green); border-color: var(--green); }
+  .check-box.on::after { content: '✓'; color: #000; font-size: 9px; font-weight: bold; }
+
+  .r-name { font-size: 0.73rem; line-height: 1.4; }
+  .r-cat { font-size: 0.62rem; color: var(--muted); background: var(--surface2); border: 1px solid var(--border); padding: 2px 7px; border-radius: 99px; display: inline-block; }
+  .r-chf { font-size: 0.78rem; color: var(--accent); font-weight: 500; text-align: right; }
+  .r-aud { font-size: 0.65rem; color: var(--muted); text-align: right; }
+  .r-status { font-size: 0.62rem; text-align: center; }
+  .r-status.ok { color: var(--green); }
+  .r-status.pend { color: var(--accent2); }
+  .del-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 11px; opacity: 0; transition: opacity 0.15s; text-align: center; }
+  .t-row:hover .del-btn { opacity: 1; }
+  .del-btn:hover { color: var(--red); }
+
+  .add-row {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--surface2);
+    flex-wrap: wrap;
+  }
+  .add-inp {
+    flex: 1;
+    min-width: 130px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 10px;
+    font-size: 0.7rem;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    outline: none;
+  }
+  .add-inp:focus { border-color: var(--accent); }
+  .add-inp::placeholder { color: var(--muted); }
+  .add-sel {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 8px;
+    font-size: 0.7rem;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    outline: none;
+    cursor: pointer;
+  }
+  .add-sel:focus { border-color: var(--accent); }
+  .add-chf {
+    width: 85px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 8px;
+    font-size: 0.7rem;
+    color: var(--accent);
+    font-family: 'DM Mono', monospace;
+    outline: none;
+  }
+  .add-chf:focus { border-color: var(--accent); }
+  .add-chf::placeholder { color: var(--muted); }
+  .add-btn {
+    background: var(--accent);
+    border: none;
+    border-radius: 6px;
+    padding: 7px 14px;
+    color: #000;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Syne', sans-serif;
+    transition: opacity 0.15s;
+  }
+  .add-btn:hover { opacity: 0.85; }
+
+  .per-person {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .pp-label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; }
+  .pp-sub { font-size: 0.6rem; color: var(--muted); margin-top: 3px; }
+  .pp-val { font-family: 'Syne', sans-serif; font-size: 1.4rem; font-weight: 700; color: var(--accent2); text-align: right; }
+
+  @media (max-width: 640px) {
+    .summary { grid-template-columns: 1fr 1fr; }
+    .t-head, .t-row { grid-template-columns: 28px 1fr 80px 28px; }
+    .t-head > *:nth-child(3), .t-head > *:nth-child(4), .t-head > *:nth-child(5), .t-head > *:nth-child(6),
+    .t-row > *:nth-child(3), .t-row > *:nth-child(4), .t-row > *:nth-child(5), .t-row > *:nth-child(6) { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="title">🦘 Budget Australia</div>
+    <div class="subtitle">Cairns → Brisbane — Avr 2026</div>
+  </div>
+  <div class="dates">
+    <div>Van pick-up <span>04 Avr · Cairns</span></div>
+    <div>Van drop-off <span>15 Avr · Brisbane</span></div>
+  </div>
+</div>
+
+<div class="summary">
+  <div class="card">
+    <div class="card-label">Total estimé</div>
+    <div class="card-value total" id="s-total">CHF 0</div>
+    <div class="card-sub" id="s-total-aud">≈ AUD 0</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Déjà payé</div>
+    <div class="card-value paid" id="s-paid">CHF 0</div>
+    <div class="card-sub" id="s-paid-n">0 ligne(s)</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Reste à payer</div>
+    <div class="card-value remaining" id="s-remain">CHF 0</div>
+    <div class="card-sub" id="s-remain-n">0 ligne(s)</div>
+  </div>
+</div>
+
+<div class="progress-wrap">
+  <div class="progress-header">
+    <span>Avancement paiements</span>
+    <span id="pct-txt">0% payé</span>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" id="pct-bar" style="width:0%"></div></div>
+</div>
+
+<div class="table-wrap">
+  <div class="t-head">
+    <div></div>
+    <div>Dépense</div>
+    <div>Catégorie</div>
+    <div style="text-align:right">CHF</div>
+    <div style="text-align:right">≈ AUD</div>
+    <div style="text-align:center">Statut</div>
+    <div></div>
+  </div>
+  <div id="rows-container"></div>
+  <div class="add-row">
+    <input class="add-inp" id="n-name" placeholder="Nouvelle dépense..." />
+    <select class="add-sel" id="n-cat">
+      <option>✈️ Vols</option>
+      <option>🚐 Van</option>
+      <option>⛽ Essence</option>
+      <option>🏕️ Camping</option>
+      <option>🤿 Activités</option>
+      <option>🍽️ Bouffe</option>
+      <option>🎒 Divers</option>
+    </select>
+    <input class="add-chf" id="n-chf" type="number" min="0" placeholder="CHF" />
+    <button class="add-btn" onclick="addExpense()">+ Ajouter</button>
+  </div>
+</div>
+
+<div class="per-person">
+  <div>
+    <div class="pp-label">Par personne</div>
+    <div class="pp-sub">basé sur 2 voyageurs</div>
+  </div>
+  <div>
+    <div class="pp-val" id="pp-chf">CHF 0</div>
+    <div class="pp-sub" id="pp-aud" style="text-align:right">≈ AUD 0 chacun</div>
+  </div>
+</div>
+
+<script>
+const RATE = 1.65;
+
+const defaults = [
+  { name: 'Vols principaux x2 (Suisse → Australie)', cat: '✈️ Vols', chf: 544, paid: true },
+  { name: 'Vol Brisbane → Melbourne x2', cat: '✈️ Vols', chf: 191, paid: false },
+  { name: 'Van Apollo Euro Mini — Platinum Pack + frais Apollo inclus', cat: '🚐 Van', chf: 2062, paid: false },
+];
+
+let data = JSON.parse(localStorage.getItem('au-v3') || 'null') || defaults;
+
+const save = () => localStorage.setItem('au-v3', JSON.stringify(data));
+
+const fmtCHF = n => 'CHF ' + Math.round(n).toLocaleString('fr-CH');
+const fmtAUD = n => 'AUD ' + Math.round(n * RATE).toLocaleString('fr-CH');
+
+function render() {
+  const container = document.getElementById('rows-container');
+  container.innerHTML = '';
+
+  let total = 0, paid = 0, paidN = 0, remainN = 0;
+
+  data.forEach((d, i) => {
+    total += d.chf;
+    if (d.paid) { paid += d.chf; paidN++; } else remainN++;
+
+    const row = document.createElement('div');
+    row.className = 't-row' + (d.paid ? ' is-paid' : '');
+
+    row.innerHTML = `
+      <div class="check-box ${d.paid ? 'on' : ''}" onclick="toggle(${i})"></div>
+      <div class="r-name">${d.name}</div>
+      <div class="r-cat">${d.cat}</div>
+      <div class="r-chf">${fmtCHF(d.chf)}</div>
+      <div class="r-aud">${fmtAUD(d.chf)}</div>
+      <div class="r-status ${d.paid ? 'ok' : 'pend'}">${d.paid ? '✓ payé' : '⏳ à payer'}</div>
+      <button class="del-btn" onclick="del(${i})">✕</button>
+    `;
+    container.appendChild(row);
+  });
+
+  document.getElementById('s-total').textContent = fmtCHF(total);
+  document.getElementById('s-total-aud').textContent = '≈ ' + fmtAUD(total);
+  document.getElementById('s-paid').textContent = fmtCHF(paid);
+  document.getElementById('s-paid-n').textContent = paidN + ' ligne(s)';
+  document.getElementById('s-remain').textContent = fmtCHF(total - paid);
+  document.getElementById('s-remain-n').textContent = remainN + ' ligne(s)';
+
+  const pct = total > 0 ? Math.round(paid / total * 100) : 0;
+  document.getElementById('pct-bar').style.width = pct + '%';
+  document.getElementById('pct-txt').textContent = pct + '% payé';
+
+  document.getElementById('pp-chf').textContent = fmtCHF(total / 2);
+  document.getElementById('pp-aud').textContent = '≈ ' + fmtAUD(total / 2) + ' chacun';
+}
+
+function toggle(i) { data[i].paid = !data[i].paid; save(); render(); }
+function del(i) { data.splice(i, 1); save(); render(); }
+
+function addExpense() {
+  const name = document.getElementById('n-name').value.trim();
+  const cat = document.getElementById('n-cat').value;
+  const chf = parseFloat(document.getElementById('n-chf').value);
+  if (!name || !chf || chf <= 0) return;
+  data.push({ name, cat, chf, paid: false });
+  document.getElementById('n-name').value = '';
+  document.getElementById('n-chf').value = '';
+  save();
+  render();
+}
+
+document.getElementById('n-name').onkeydown = e => { if (e.key === 'Enter') document.getElementById('n-chf').focus(); };
+document.getElementById('n-chf').onkeydown = e => { if (e.key === 'Enter') addExpense(); };
+
+render();
+</script>
+</body>
+</html>
